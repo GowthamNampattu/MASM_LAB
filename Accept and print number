@@ -1,0 +1,44 @@
+data segment
+msg db "Enter a number$"
+msg2 db 0dh,0ah,"Entered number is:$"
+buffer db 20 dup(?) 
+data ends
+
+code segment
+start:
+   mov ax,data
+   mov ds,ax
+
+   lea dx,msg
+   mov ah,09h
+   int 21h
+
+   mov si,offset buffer
+
+read_loop:
+   mov ah, 01h 
+   int 21h
+   cmp al, 13        
+   je done_input  
+   
+   mov [si],al
+   inc si
+
+   jmp read_loop
+
+done_input:
+   mov byte ptr [si], '$'
+
+   lea dx,msg2
+   mov ah,09h
+   int 21h
+   
+   lea dx,buffer
+   mov ah,09h
+   int 21h
+
+   mov ah,4ch
+   int 21h
+
+code ends
+end start
