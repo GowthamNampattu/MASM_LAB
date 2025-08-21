@@ -1,0 +1,175 @@
+data segment
+    msg1 db "Enter the first number: $"
+    msg2 db 10,13,"Enter the second number: $"
+    msg3 db 10,13,"Result: $"
+    inputBuf db 6, 7 dup(0) 
+    errorMsg db 10,13,"Invalid input! Enter digits only (max 5).$", 0
+data ends
+
+code segment
+assume cs:code, ds:data
+start:
+    mov ax, data
+    mov ds, ax
+
+   
+    lea dx, msg1
+    mov ah, 09h
+    int 21h
+    call ReadNumber
+    cmp ax, 0FFFFh         
+    je invalid_input
+    mov si, ax              
+
+    
+    lea dx, msg2
+    mov ah, 09h
+    int 21h
+    call ReadNumber
+    cmp ax, 0FFFFh          
+    je invalid_input
+    mov di, ax             
+
+  
+    mov ax, si
+    add ax, di
+    jc overflow             
+    mov si, ax              
+
+    
+    lea dx, msg3
+    mov ah, 09h
+    int 21h
+    mov ax, si
+    call PrintNumber
+
+    jmp exit_program
+
+invalid_input:
+    lea dx, errorMsg
+    mov ah, 09h
+    int 21h
+
+exit_program:
+   
+    mov ah, 4Ch
+    int 21h
+
+overflow:
+    lea dx, errorMsg
+    mov ah, 09h
+    int 21h
+    jmp exit_program
+
+ReadNumber proc
+    push bx
+    push cx
+    push di
+    push si
+
+    
+    mov di, offset inputBuf + 1
+    mov cx, 6
+    mov al, 0
+    rep stosb
+
+    mov di, offset inputBuf + 1
+    mov cx, 0            
+
+read_loop:
+    mov ah, 01h          
+    int 21h
+    cmp al, 13            
+    je finish_input
+    cmp al, '0'             
+    jb invalid
+    cmp al, '9'
+    ja invalid
+    cmp cx, 5            
+    jae invalid
+    mov [di], al          
+    inc di
+    inc cx
+    jmp read_loop
+
+invalid:
+    mov ax, 0FFFFh          
+    jmp done_read
+
+finish_input:
+    cmp cx, 0              
+    je invalid
+    mov byte ptr [di], 0   
+
+    
+    mov si, offset inputBuf + 1
+    xor ax, ax            
+    mov bx, 10          
+
+convert_loop:
+    mov cl, [si]
+    cmp cl, 0
+    je done_convert
+    sub cl, '0'         
+    mul bx                  
+    jc invalid        
+    add ax, cx            
+    jc invalid          
+    inc si
+    jmp convert_loop
+
+done_convert:
+    cmp ax, 0FFFFh          
+    jae invalid
+
+done_read:
+    pop si
+    pop di
+    pop cx
+    pop bx
+    ret
+ReadNumber endp
+
+
+PrintNumber proc
+    push ax
+    push bx
+    push cx
+    push dx
+
+    mov cx, 0            
+    mov bx, 10        
+
+    cmp ax, 0               
+    jne extract_digits
+    mov dl, '0'
+    mov ah, 02h
+    int 21h
+    jmp done_print
+
+extract_digits:
+    xor dx, dx
+    div bx             
+    push dx               
+    inc cx
+    test ax, ax             
+    jnz extract_digits
+
+print_digits:
+    pop dx
+    add dl, '0'         
+    mov ah, 02h
+    int 21h
+    loop print_digits
+
+done_print:
+    pop dx
+    pop cx
+    pop bx
+    pop ax
+    ret
+PrintNumber endp
+
+code ends
+end start
+
